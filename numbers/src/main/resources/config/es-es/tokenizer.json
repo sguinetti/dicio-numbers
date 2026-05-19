@@ -614,13 +614,21 @@
         "cien": 100,
         "ciento": 100,
         "doscientos": 200,
+        "dosciento": 200,
         "trescientos": 300,
+        "tresciento": 300,
         "cuatrocientos": 400,
+        "cuatrociento": 400,
         "quinientos": 500,
+        "quiniento": 500,
         "seiscientos": 600,
+        "seisciento": 600,
         "setecientos": 700,
+        "seteciento": 700,
         "ochocientos": 800,
-        "novecientos": 900
+        "ochociento": 800,
+        "novecientos": 900,
+        "noveciento": 900
       }
     },
     {
@@ -686,6 +694,7 @@
         "undécima": 11,
         "duodécimo": 12,
         "duodécima": 12,
+        "decimotercer": 13,
         "decimotercero": 13,
         "decimotercera": 13,
         "decimocuarto": 14,
@@ -957,8 +966,6 @@
     "m",
     "h",
     "d",
-    "sem",
-    "mes",
-    "año"
+    "a"
   ]
 }

@@ -49,7 +49,7 @@ public class NiceNumberTest {
     public void customDenominators() {
         assertEquals("menos cuatro y cuatro décimas", pf.niceNumber(-4.4).denominators(Arrays.asList(2, 3, 4, 6, 7, 8, 9, 10, 11)).get());
         assertEquals("-64 6/12", pf.niceNumber(-64.5).speech(F).denominators(Collections.singletonList(12)).get());
-        assertEquals("menos trescientas quinientas mil millonésimas", pf.niceNumber(-3.5).denominators(Arrays.asList(1000000, 2000000)).get());
+        assertEquals("menos tres y quinientas mil millonésimas", pf.niceNumber(-3.5).denominators(Arrays.asList(1000000, 2000000)).get());
         assertEquals("9 1000000/2000000", pf.niceNumber(9.5).speech(F).denominators(Arrays.asList(2000000, 1000000)).get());
         assertEquals("cero punto ocho", pf.niceNumber(4.0 / 5).denominators(Arrays.asList(2, 3, 4)).get());
     }

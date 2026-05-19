@@ -129,7 +129,7 @@ public class PronounceNumberTest {
         assertEquals("décimo", pf.pronounceNumber(10).ordinal(T).get());
         assertEquals("decimoquinto", pf.pronounceNumber(15).ordinal(T).get());
         assertEquals("vigésimo", pf.pronounceNumber(20).ordinal(T).get());
-        assertEquals("vigésimo séptimo", pf.pronounceNumber(27).ordinal(T).get());
+        assertEquals("vigesimoséptimo", pf.pronounceNumber(27).ordinal(T).get());
         assertEquals("trigésimo", pf.pronounceNumber(30).ordinal(T).get());
         assertEquals("trigésimo tercero", pf.pronounceNumber(33).ordinal(T).get());
         assertEquals("centésimo", pf.pronounceNumber(100).ordinal(T).get());

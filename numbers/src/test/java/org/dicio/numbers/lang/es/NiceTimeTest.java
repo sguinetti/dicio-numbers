@@ -101,10 +101,10 @@ public class NiceTimeTest {
     @Test
     public void tenAm() {
         final LocalTime dt = LocalTime.of(10, 3, 44);
-        assertEquals("diez cero trés", pf.niceTime(dt).get());
-        assertEquals("diez cero trés a.m.", pf.niceTime(dt).showAmPm(T).get());
-        assertEquals("diez cero trés", pf.niceTime(dt).use24Hour(T).get());
-        assertEquals("diez y trés", pf.niceTime(dt).use24Hour(T).showAmPm(T).get());
+        assertEquals("diez cero tres", pf.niceTime(dt).get());
+        assertEquals("diez cero tres a.m.", pf.niceTime(dt).showAmPm(T).get());
+        assertEquals("diez cero tres", pf.niceTime(dt).use24Hour(T).get());
+        assertEquals("diez y tres", pf.niceTime(dt).use24Hour(T).showAmPm(T).get());
         assertEquals("10:03", pf.niceTime(dt).speech(F).get());
         assertEquals("10:03 AM", pf.niceTime(dt).speech(F).showAmPm(T).get());
         assertEquals("10:03", pf.niceTime(dt).speech(F).use24Hour(T).get());

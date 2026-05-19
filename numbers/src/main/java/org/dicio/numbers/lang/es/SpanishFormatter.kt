@@ -150,6 +150,12 @@ class SpanishFormatter : Formatter("config/es-es") {
             return time.format(DateTimeFormatter.ofPattern(pattern, Locale("es", "ES")))
         }
     }
+
+    override fun niceDateTime(dateTime: LocalDateTime, speech: Boolean, use24Hour: Boolean, showAmPm: Boolean): String {
+        return super.niceDateTime(dateTime, speech, use24Hour, showAmPm)
+            .replace("a las mediodía", "al mediodía")
+            .replace("a las medianoche", "a la medianoche")
+    }
     
     private fun getHourName(hour: Int, isForNextHour: Boolean): String {
         // Spanish context: "la una" (one o'clock) is feminine singular.
