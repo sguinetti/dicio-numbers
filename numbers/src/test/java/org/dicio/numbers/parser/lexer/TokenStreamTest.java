@@ -17,21 +17,21 @@ import java.util.List;
 
 public class TokenStreamTest {
     private static final List<Token> TOKENS = Arrays.asList(
-            new Token("", " "),
-            new MatchedToken("a", "\n ", Collections.singleton("ignore")),
-            new DurationToken("ms", "", "", t(1, ChronoUnit.MILLIS), false)
+            new Token("", " ", 0),
+            new MatchedToken("a", "\n ", 1, Collections.singleton("ignore")),
+            new DurationToken("ms", "", 4, "", t(1, ChronoUnit.MILLIS), false)
     );
 
     private static final List<Token> TOKENS_IGNORES = Arrays.asList(
-            new MatchedToken("hello", "", Collections.singleton("ignore")),
-            new Token(",", " "),
-            new MatchedToken("HOW", "\n", new HashSet<>(Arrays.asList("ignore", "other"))),
-            new NumberToken("is", " \t", new HashSet<>(Arrays.asList("ignore", "another")), n(5)),
-            new NumberToken("2022", " ", Collections.emptySet(), n(2022)),
-            new MatchedToken("going", " ", Collections.singleton("test")),
-            new MatchedToken("?", " ", Collections.singleton("ignore")),
-            new DurationToken("s", "", "", t(1, ChronoUnit.SECONDS), true),
-            new NumberToken("?", " ", Collections.singleton("ignore"), n(-1))
+            new MatchedToken("hello", "", 0, Collections.singleton("ignore")),
+            new Token(",", " ", 5),
+            new MatchedToken("HOW", "\n", 7, new HashSet<>(Arrays.asList("ignore", "other"))),
+            new NumberToken("is", " \t", 11, new HashSet<>(Arrays.asList("ignore", "another")), n(5)),
+            new NumberToken("2022", " ", 15, Collections.emptySet(), n(2022)),
+            new MatchedToken("going", " ", 20, Collections.singleton("test")),
+            new MatchedToken("?", " ", 26, Collections.singleton("ignore")),
+            new DurationToken("s", "", 28, "", t(1, ChronoUnit.SECONDS), true),
+            new NumberToken("?", " ", 29, Collections.singleton("ignore"), n(-1))
     );
 
     @Test
@@ -99,5 +99,33 @@ public class TokenStreamTest {
                         ts.indexOfWithoutCategory("ignore", j - i));
             }
         }
+    }
+
+    @Test
+    public void testTokenCount() {
+        final TokenStream ts = new TokenStream(TOKENS);
+        assertEquals(TOKENS.size(), ts.getTokenCount());
+
+        ts.position = 0;
+        ts.setTokenCount(100);
+        assertEquals(TOKENS.size(), ts.getTokenCount());
+        assertFalse(ts.finished());
+        assertEquals(0, ts.position);
+        assertEquals(TOKENS.get(0), ts.get(0));
+        assertEquals(Token.emptyToken(), ts.get(99));
+        ts.position = 99;
+        assertEquals(TOKENS.get(1), ts.get(-98));
+        assertEquals(Token.emptyToken(), ts.get(0));
+
+        ts.position = 2;
+        ts.setTokenCount(2);
+        assertEquals(2, ts.getTokenCount());
+        assertTrue(ts.finished());
+        assertEquals(2, ts.position);
+        assertEquals(Token.emptyToken(), ts.get(0));
+        assertEquals(TOKENS.get(1), ts.get(-1));
+        ts.position = 0;
+        assertEquals(TOKENS.get(0), ts.get(0));
+        assertEquals(Token.emptyToken(), ts.get(2));
     }
 }

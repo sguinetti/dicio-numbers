@@ -407,6 +407,7 @@ public class ExtractDateTimeTest extends WithTokenizerTestBase {
         assertDate("monday november",                                LocalDate.of(2023,  1,  30), 1);
         assertDate("october two thousand and twelve",                LocalDate.of(2012,  10, 1),  5);
         assertDate("999999999",                                      LocalDate.of(999999999,1,1), 1);
+        assertDate("30 of february",                                 LocalDate.of(2023,  2, 28),  3); // special case, how would you handle it otherwise?
         // the following work thanks to special case in number extractor!
         assertDate("twenty twelve",                                  LocalDate.of(2012,  1,  1),  2);
         assertDate("sunday twenty thirteen",                         LocalDate.of(2023,  2,  5),  1);
@@ -512,14 +513,14 @@ public class ExtractDateTimeTest extends WithTokenizerTestBase {
     @Test
     public void testNumberParserExtractDateTime() {
         final ParserFormatter npf = new ParserFormatter(null, new EnglishParser());
-        assertNull(npf.extractDateTime("hello how are you").getFirst());
+        assertNull(npf.extractDateTime("hello how are you").parseFirst());
         assertEquals(NOW.minusDays(30).withHour(14).withMinute(39).withSecond(0).withNano(0),
-                npf.extractDateTime("2:39 p.m., thirty days ago").now(NOW).getFirst());
+                npf.extractDateTime("2:39 p.m., thirty days ago").now(NOW).parseFirst());
         assertEquals(NOW.plusMinutes(3).plusSeconds(46),
-                npf.extractDateTime("in three minutes forty six seconds").now(NOW).getFirst());
+                npf.extractDateTime("in three minutes forty six seconds").now(NOW).parseFirst());
         assertEquals(NOW.withYear(3).withMonth(2).withDayOfMonth(1),
-                npf.extractDateTime("1 2/3").preferMonthBeforeDay(false).now(NOW).getFirst());
+                npf.extractDateTime("1 2/3").preferMonthBeforeDay(false).now(NOW).parseFirst());
         assertEquals(NOW.withYear(3).withMonth(1).withDayOfMonth(2),
-                npf.extractDateTime("1.2,3").preferMonthBeforeDay(true).now(NOW).getFirst());
+                npf.extractDateTime("1.2,3").preferMonthBeforeDay(true).now(NOW).parseFirst());
     }
 }

@@ -1,0 +1,75 @@
+name: Continuous integration
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/**/*.md'
+      - '.github/FUNDING.yml'
+      - '.github/ISSUE_TEMPLATE/**'
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/**/*.md'
+      - '.github/FUNDING.yml'
+      - '.github/ISSUE_TEMPLATE/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Make sure Gradle wrapper is legitimate
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "temurin"
+          cache: 'gradle'
+
+      - name: Build debug APK and run jvm tests
+        run: ./gradlew test --stacktrace
+
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out dicio-numbers repository
+        uses: actions/checkout@v4
+        with:
+          path: ./dicio-numbers
+
+      - name: Check out dicio-android repository
+        uses: actions/checkout@v4
+        with:
+          repository: Stypox/dicio-android
+          path: ./dicio-android
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "temurin"
+          cache: 'gradle'
+
+      - name: Build debug APK with local dicio-numbers
+        run: |
+          cd dicio-android
+          echo "useLocalDicioLibraries=dicio-numbers:../dicio-numbers" >> local.properties
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: Dicio app
+          path: dicio-android/app/build/outputs/apk/debug/*.apk

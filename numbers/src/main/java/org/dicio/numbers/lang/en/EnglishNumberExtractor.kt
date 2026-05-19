@@ -1,6 +1,5 @@
 package org.dicio.numbers.lang.en
 
-import org.dicio.numbers.parser.lexer.NumberToken
 import org.dicio.numbers.parser.lexer.TokenStream
 import org.dicio.numbers.unit.Number
 import org.dicio.numbers.unit.isNullOrZero
@@ -11,50 +10,55 @@ class EnglishNumberExtractor internal constructor(
     private val shortScale: Boolean
 ) {
     fun numberPreferOrdinal(): Number? {
-        // first try with suffix multiplier, e.g. dozen
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(true) // then try with normal number
-        }
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozen
+            ?: numberSignPoint(true) // then try with normal number
 
         // maybe there is a valid denominator? (note: number could be null, e.g. a tenth)
         return divideByDenominatorIfPossible(number)
     }
 
     fun numberPreferFraction(): Number? {
-        // first try with suffix multiplier, e.g. dozen
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(false) // then try without ordinal
-        }
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozen
+            ?: numberSignPoint(false) // then try without ordinal
 
-        // maybe there is a valid denominator? (note: number could be null, e.g. a tenth)
-        // note that e.g. "a couple halves" ends up here, but that's valid
-        number = divideByDenominatorIfPossible(number)
-
-        if (number == null) {
+        return if (number == null) {
             // maybe an ordinal number?
-            number = numberSignPoint(true)
+            numberSignPoint(true)
+        } else {
+            // maybe there is a valid denominator? (note: number could be null, e.g. a tenth)
+            // note that e.g. "a couple halves" ends up here, but that's valid
+            divideByDenominatorIfPossible(number)
         }
-        return number
     }
 
     fun numberNoOrdinal(): Number? {
         // for now this function is used internally just for duration parsing, but maybe it could
         // be exposed to library users, giving more control over how ordinals are handled.
 
-        // first try with suffix multiplier, e.g. dozen
-
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(false) // then try without ordinal
-        }
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozen
+            ?: numberSignPoint(false) // then try without ordinal
 
         // maybe there is a valid denominator? (note: number could be null, e.g. a tenth)
         // note that e.g. "a couple halves" ends up here, but that's valid
-        number = divideByDenominatorIfPossible(number)
+        return divideByDenominatorIfPossible(number)
+    }
 
-        return number
+    fun numberMustBeInteger(): Number? {
+        val number = numberSuffixMultiplierInteger() // first try with suffix multiplier, e.g. dozen
+            ?: numberSignInteger(true) // then try with normal number
+
+        return if (number == null) {
+            null
+        } else {
+            // a number was found, maybe it has a valid denominator?
+            // note that e.g. "doppia dozzina" ends up here, but that's valid
+            val multiplier = numberSuffixMultiplierInteger()
+            if (multiplier == null) {
+                number
+            } else {
+                number.multiply(multiplier)
+            }
+        }
     }
 
 
@@ -125,8 +129,26 @@ class EnglishNumberExtractor internal constructor(
         }
     }
 
+    fun numberSuffixMultiplierInteger(): Number? {
+        if (ts[0].hasCategory("suffix_multiplier") && ts[0].number!!.isInteger) {
+            ts.movePositionForwardBy(1)
+            return ts[-1].number // a suffix multiplier, e.g. dozen, score
+        } else if (ts[0].isValue("a") && ts[1].hasCategory("suffix_multiplier")
+            && ts[1].number!!.isInteger
+        ) {
+            ts.movePositionForwardBy(2) // also skip "a" before the suffix, e.g. a dozen
+            return ts[-1].number // a suffix multiplier preceded by "a", e.g. a score
+        } else {
+            return null
+        }
+    }
+
     fun numberSignPoint(allowOrdinal: Boolean): Number? {
         return NumberExtractorUtils.signBeforeNumber(ts) { numberPoint(allowOrdinal) }
+    }
+
+    fun numberSignInteger(allowOrdinal: Boolean): Number? {
+        return NumberExtractorUtils.signBeforeNumber(ts) { numberInteger(allowOrdinal) }
     }
 
     fun numberPoint(allowOrdinal: Boolean): Number? {
@@ -199,21 +221,27 @@ class EnglishNumberExtractor internal constructor(
     }
 
     fun numberInteger(allowOrdinal: Boolean): Number? {
-        if (ts[0].hasCategory("ignore")
-            && (!ts[0].isValue("a") || ts[1].hasCategory("ignore"))
+        val originalPosition = ts.position
+        // this avoids matching "and seven", "a two", "a hundredth" and "a trillionth",
+        // but still allows "a hundred" and "a trillion"
+        if (ts[0].isValue("a") && (
+                    (ts[1].hasCategory("multiplier") && !ts[1].number!!.isOrdinal)
+                            || ts[1].hasCategory("hundred")
+                    )
         ) {
-            return null // do not eat ignored words at the beginning, expect a (see e.g. a hundred)
+            // allow ignoring "a" if it comes right before the multiplier (e.g. a thousand)
+            ts.movePositionForwardBy(1)
         }
 
-        var n = NumberExtractorUtils.numberMadeOfGroups(
-            ts,
-            allowOrdinal,
+        var n = NumberExtractorUtils.numberMadeOfGroups(ts) { ts, lastMultiplier ->
             if (shortScale)
-                NumberExtractorUtils::numberGroupShortScale
+                NumberExtractorUtils.numberGroupShortScale(ts, allowOrdinal, lastMultiplier)
             else
-                ::numberGroupLongScale
-        )
+                numberGroupLongScale(ts, allowOrdinal, lastMultiplier)
+        }
         if (n == null) {
+            // restore original position, "a" can't come before a random raw number, e.g. a 1207
+            ts.position = originalPosition
             // try to parse big raw numbers (>=1000), e.g. 1207
             return NumberExtractorUtils.numberBigRaw(ts, allowOrdinal)
         } else if (n.isOrdinal) {
@@ -357,21 +385,20 @@ class EnglishNumberExtractor internal constructor(
                 }
 
                 if (first == null) {
-                    val nextNotIgnore = ts.indexOfWithoutCategory("ignore", 0)
-                    if (NumberExtractorUtils.isRawNumber(ts[nextNotIgnore])
-                        && ts[nextNotIgnore].number!!.lessThan(1000000)
+                    if (NumberExtractorUtils.isRawNumber(ts[0])
+                        && ts[0].number!!.lessThan(1000000)
                     ) {
                         // maybe a raw number smaller than 1000000, e.g. 785743
-                        val ordinal = ts[nextNotIgnore + 1].hasCategory("ordinal_suffix")
+                        val ordinal = ts[1].hasCategory("ordinal_suffix")
                         if (ordinal) {
                             if (!allowOrdinal) {
                                 // do not allow raw number + st/nd/rd/th if allowOrdinal is false
                                 return null
                             }
-                            ts.movePositionForwardBy(nextNotIgnore + 2)
+                            ts.movePositionForwardBy(2)
                             return ts[-2].number!!.withOrdinal(true)
                         }
-                        ts.movePositionForwardBy(nextNotIgnore + 1)
+                        ts.movePositionForwardBy(1)
                         first = ts[-1].number // raw number group, e.g. 123042 million
                     }
                 }
@@ -381,8 +408,12 @@ class EnglishNumberExtractor internal constructor(
                     return first
                 }
 
+                val nextNotIgnore = ts.indexOfWithoutCategory("ignore", 0)
+                ts.movePositionForwardBy(nextNotIgnore)
                 val second = NumberExtractorUtils.numberLessThan1000(ts, allowOrdinal)
-                if (second != null) {
+                if (second == null) {
+                    ts.movePositionForwardBy(-nextNotIgnore)
+                } else {
                     first = first.plus(second)
                     if (second.isOrdinal) {
                         return first.withOrdinal(true) // nothing else follows an ordinal number

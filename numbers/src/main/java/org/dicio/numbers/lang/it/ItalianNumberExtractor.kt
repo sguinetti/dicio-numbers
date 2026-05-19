@@ -7,27 +7,22 @@ import org.dicio.numbers.util.NumberExtractorUtils
 
 class ItalianNumberExtractor internal constructor(private val ts: TokenStream) {
     fun numberPreferOrdinal(): Number? {
-        // first try with suffix multiplier, e.g. dozen
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(true) // then try with normal number
-        }
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozzina
+            ?: numberSignPoint(true) // then try with normal number
 
-        if (number != null) {
+        return if (number == null) {
+            null
+        } else {
             // a number was found, maybe it has a valid denominator?
-            number = divideByDenominatorIfPossible(number)
+            divideByDenominatorIfPossible(number)
         }
-        return number
     }
 
     fun numberPreferFraction(): Number? {
-        // first try with suffix multiplier, e.g. dozen
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(false) // then try without ordinal
-        }
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozzina
+            ?: numberSignPoint(false) // then try without ordinal
 
-        number = if (number == null) {
+        return if (number == null) {
             // maybe an ordinal number?
             numberSignPoint(true)
         } else {
@@ -35,30 +30,44 @@ class ItalianNumberExtractor internal constructor(private val ts: TokenStream) {
             // note that e.g. "a couple halves" ends up here, but that's valid
             divideByDenominatorIfPossible(number)
         }
-        return number
     }
 
     fun numberNoOrdinal(): Number? {
         // for now this function is used internally just for duration parsing, but maybe it could
         // be exposed to library users, giving more control over how ordinals are handled.
 
-        // first try with suffix multiplier, e.g. dozen
+        val number = numberSuffixMultiplier() // first try with suffix multiplier, e.g. dozzina
+            ?: numberSignPoint(false) // then try without ordinal
 
-        var number = numberSuffixMultiplier()
-        if (number == null) {
-            number = numberSignPoint(false) // then try without ordinal
-        }
-
-        if (number != null) {
+        return if (number == null) {
+            null
+        } else {
             // a number was found, maybe it has a valid denominator?
             // note that e.g. "una mezza coppia" ends up here, but that's valid
-            number = divideByDenominatorIfPossible(number)
+            divideByDenominatorIfPossible(number)
         }
-
-        return number
     }
 
-    fun divideByDenominatorIfPossible(numberToEdit: Number): Number? {
+    fun numberMustBeInteger(): Number? {
+        val number = numberSuffixMultiplierInteger() // first try with suffix multiplier, e.g. dozzina
+            ?: numberSignInteger(true) // then try with normal number
+
+        return if (number == null) {
+            null
+        } else {
+            // a number was found, maybe it has a valid denominator?
+            // note that e.g. "doppia dozzina" ends up here, but that's valid
+            val multiplier = numberSuffixMultiplierInteger()
+            if (multiplier == null) {
+                number
+            } else {
+                number.multiply(multiplier)
+            }
+        }
+    }
+
+
+    fun divideByDenominatorIfPossible(numberToEdit: Number): Number {
         // if numberToEdit is directly followed by an ordinal number then it is a fraction (only if numberToEdit is not
         // ordinal or already decimal). Note: a big integer (i.e. 10^24) would be decimal, here we are assuming that
         // such a number will never have a fraction after it for simplicity.
@@ -105,12 +114,25 @@ class ItalianNumberExtractor internal constructor(private val ts: TokenStream) {
         }
     }
 
+    fun numberSuffixMultiplierInteger(): Number? {
+        if (ts[0].hasCategory("suffix_multiplier") && ts[0].number!!.isInteger) {
+            ts.movePositionForwardBy(1)
+            return ts[-1].number // a suffix multiplier, e.g. dozen, score
+        } else {
+            return null
+        }
+    }
+
     fun numberSignPoint(allowOrdinal: Boolean): Number? {
         return NumberExtractorUtils.signBeforeNumber(ts) { numberPoint(allowOrdinal) }
     }
 
+    fun numberSignInteger(allowOrdinal: Boolean): Number? {
+        return NumberExtractorUtils.signBeforeNumber(ts) { numberInteger(allowOrdinal) }
+    }
+
     fun numberPoint(allowOrdinal: Boolean): Number? {
-        var n = numberInteger(allowOrdinal).let {
+        var n = numberInteger(allowOrdinal).let { // the `let` makes `n` be of non-null type
             if (it == null || it.isOrdinal) {
                 // numbers can not start with just "virgola"
                 // no point or fraction separator can appear after an ordinal number
@@ -176,20 +198,12 @@ class ItalianNumberExtractor internal constructor(private val ts: TokenStream) {
     }
 
     fun numberInteger(allowOrdinal: Boolean): Number? {
-        if (ts[0].hasCategory("ignore")) {
-            return null // do not eat ignored words at the beginning
+        var n = NumberExtractorUtils.numberMadeOfGroups(ts) { ts, lastMultiplier ->
+            NumberExtractorUtils.numberGroupShortScale(ts, allowOrdinal, lastMultiplier)
         }
-
-        var n = NumberExtractorUtils.numberMadeOfGroups(
-            ts,
-            allowOrdinal,
-            NumberExtractorUtils::numberGroupShortScale
-        )
         if (n == null) {
-            return NumberExtractorUtils.numberBigRaw(
-                ts,
-                allowOrdinal
-            ) // try to parse big raw numbers (>=1000), e.g. 1207
+            // try to parse big raw numbers (>=1000), e.g. 1207
+            return NumberExtractorUtils.numberBigRaw(ts, allowOrdinal)
         } else if (n.isOrdinal) {
             return n // no more checks, as the ordinal word comes last, e.g. million twelfth
         }

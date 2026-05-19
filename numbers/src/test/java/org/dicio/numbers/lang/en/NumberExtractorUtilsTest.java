@@ -50,18 +50,17 @@ public class NumberExtractorUtilsTest extends NumberExtractorUtilsTestBase {
     @Test
     public void testNumberLessThan1000EdgeCases() {
         assertNumberLessThan1000("four five",                          T, 4,   F, 1);
-        assertNumberLessThan1000("a two and",                          F, 2,   F, 2);
+        assertNumberLessThan1000("two and",                            F, 2,   F, 1);
         assertNumberLessThan1000("one thirteen",                       T, 1,   F, 1);
         assertNumberLessThan1000("sixteen eight",                      F, 16,  F, 1);
         assertNumberLessThan1000("eighteen hundred",                   T, 18,  F, 1);
         assertNumberLessThan1000("zero hundred",                       F, 0,   F, 1);
         assertNumberLessThan1000("sixty nought",                       T, 60,  F, 1);
-        assertNumberLessThan1000("a hundred",                          F, 100, F, 2);
         assertNumberLessThan1000("one, and a hundred",                 T, 100, F, 5);
         assertNumberLessThan1000("seven hundred and six",              F, 706, F, 4);
         assertNumberLessThan1000("one hundred and ninety one",         T, 191, F, 5);
         assertNumberLessThan1000("eight and a hundred and fifteen",    F, 815, F, 6);
-        assertNumberLessThan1000("a a one a a hundred a a eleven a a", T, 111, F, 9);
+        assertNumberLessThan1000("one a a hundred a a eleven a a",     T, 111, F, 7);
     }
 
     @Test
@@ -85,24 +84,29 @@ public class NumberExtractorUtilsTest extends NumberExtractorUtilsTestBase {
 
     @Test
     public void testNumberLessThan1000Null() {
-        assertNumberLessThan1000Null("",                  F);
-        assertNumberLessThan1000Null("hello",             T);
-        assertNumberLessThan1000Null("hello how are you", F);
-        assertNumberLessThan1000Null("a hello two and",   T);
-        assertNumberLessThan1000Null("a car and a half,", F);
-        assertNumberLessThan1000Null("a million",         T);
-        assertNumberLessThan1000Null(" twenty",           F);
+        assertNumberLessThan1000Null("",                    F);
+        assertNumberLessThan1000Null("hello",               T);
+        assertNumberLessThan1000Null("hello how are you",   F);
+        assertNumberLessThan1000Null("a hello two and",     T);
+        assertNumberLessThan1000Null("a car and a half,",   F);
+        assertNumberLessThan1000Null("a million",           T);
+        assertNumberLessThan1000Null(" twenty",             F);
+        assertNumberLessThan1000Null("a two",               T);
+        assertNumberLessThan1000Null("a hundred",           F); // the "a" is handled in the English extractor
+        assertNumberLessThan1000Null("a 1247",              F);
+        assertNumberLessThan1000Null("a, hundred",          T);
+        assertNumberLessThan1000Null("a a hundred",         T);
+        assertNumberLessThan1000Null("a a one a a hundred", F);
     }
 
     @Test
     public void testNumberGroupShortScale() {
         assertNumberGroupShortScale("one hundred and twenty million", F, 1000000000, 120000000, F, 5);
         assertNumberGroupShortScale("three thousand and six",         T, 1000000000, 3000,      F, 2);
-        assertNumberGroupShortScale("a hundred thousand",             F, 1000000,    100000,    F, 3);
         assertNumberGroupShortScale("hundred 70 thousand",            T, 1000000,    170000,    F, 3);
         assertNumberGroupShortScale("572 million",                    F, 1000000000, 572000000, F, 2);
         assertNumberGroupShortScale("3 million",                      T, 1000000000, 3000000,   F, 2);
-        assertNumberGroupShortScale(", one hundred and ninety one",   F, 1000,       191,       F, 6);
+        assertNumberGroupShortScale("one hundred and ninety one",     F, 1000,       191,       F, 5);
     }
 
     @Test
@@ -129,5 +133,7 @@ public class NumberExtractorUtilsTest extends NumberExtractorUtilsTestBase {
         assertNumberGroupShortScaleNull("nine thousand and one", T, 1000);
         assertNumberGroupShortScaleNull("eight million people",  F, 1000000);
         assertNumberGroupShortScaleNull(" ten ",                 T, 1000000);
+        assertNumberGroupShortScaleNull("a two",                 F, 1000);
+        assertNumberGroupShortScaleNull("a hundred thousand",    F, 1000000); // the "a" is handled in the English extractor
     }
 }

@@ -90,12 +90,11 @@ public class ExtractNumbersTest extends WithTokenizerTestBase {
         assertNumberGroupLongScale("one hundred and twenty million", F, 1e9,  120e6,     F, 5);
         assertNumberGroupLongScale("sixty three quadrillion",        F, 1e28, 63e24,     F, 3);
         assertNumberGroupLongScale("three thousand and six",         T, 1e9,  3006,      F, 4);
-        assertNumberGroupLongScale("a hundred thousand",             F, 1e6,  100000,    F, 3);
         assertNumberGroupLongScale("hundred 70 thousand",            T, 1e6,  170000,    F, 3);
         assertNumberGroupLongScale("572 million",                    F, 1e9,  572e6,     F, 2);
         assertNumberGroupLongScale("572012 billion",                 F, 1e18, 572012e12, F, 2);
         assertNumberGroupLongScale("3 million",                      T, 1e9,  3e6,       F, 2);
-        assertNumberGroupLongScale(", one hundred and ninety one",   F, 1e6,  191,       F, 6);
+        assertNumberGroupLongScale("one hundred and ninety one",     F, 1e6,  191,       F, 5);
     }
 
     @Test
@@ -121,6 +120,7 @@ public class ExtractNumbersTest extends WithTokenizerTestBase {
         assertNumberGroupLongScaleNull("nine thousand and one", T, 1000);
         assertNumberGroupLongScaleNull("eight million people",  F, 1e6);
         assertNumberGroupLongScaleNull(" ten ",                 T, 1e6);
+        assertNumberGroupLongScaleNull("a hundred thousand",    F, 1e6); // the "a" is handled in the English extractor
     }
 
     @Test
@@ -136,6 +136,7 @@ public class ExtractNumbersTest extends WithTokenizerTestBase {
         assertNumberInteger("654 and",                      F, T, 654,            F, 1);
         assertNumberInteger("a hundred four,",              F, F, 104,            F, 3);
         assertNumberInteger("nine thousand, three million", T, T, 9000,           F, 2);
+        assertNumberInteger("a hundred a, thousand",        F, F, 100000,         F, 5);
     }
 
     @Test
@@ -172,7 +173,7 @@ public class ExtractNumbersTest extends WithTokenizerTestBase {
         // independent of short/long scale and of ordinal mode
         assertNumberInteger("23,001",               T, F, 23001,      F, 3);
         assertNumberInteger("19,123",               T, T, 19123,      F, 3);
-        assertNumberInteger("a 167,42",             F, T, 167,        F, 2);
+        assertNumberInteger("167,42",               F, T, 167,        F, 1);
         assertNumberInteger("1,234,023,054, hello", F, F, 1234023054, F, 7);
         assertNumberInteger("23,001, a 500",        T, T, 23001,      F, 3);
         assertNumberInteger("5,030,two",            F, F, 5030,       F, 3);
@@ -280,6 +281,10 @@ public class ExtractNumbersTest extends WithTokenizerTestBase {
         assertNumberIntegerNull(", 123485 and",        T);
         assertNumberIntegerNull("and 123",             F);
         assertNumberIntegerNull(" one thousand ",      T);
+        assertNumberIntegerNull("a two",               F);
+        assertNumberIntegerNull("a 167,42",            T);
+        assertNumberIntegerNull("a, hundred",          F); // the "a" must come right before the multiplier
+        assertNumberIntegerNull("a 1000",              T); // the "a" can't come before a raw number
     }
 
     @Test
